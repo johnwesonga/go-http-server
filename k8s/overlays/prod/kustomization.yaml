@@ -1,0 +1,20 @@
+resources:
+  - ../../base
+
+nameSuffix: -prod
+
+commonLabels:
+  env: prod
+
+images:
+  - name: johnwesonga/go-http-server
+    newTag: latest
+
+patches:
+  - target:
+      kind: Deployment
+      name: go-http-server
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
