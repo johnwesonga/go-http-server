@@ -13,7 +13,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    # Set up Go (optional, for tests)
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.25.3'
+        
+    # Run tests (optional but recommended)
+    - name: Run tests
+      run: go test ./...
+      
     - name: Build and push the Docker image
       run: |
         IMAGE_TAG=${GITHUB_SHA::7}
