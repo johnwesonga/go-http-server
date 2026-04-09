@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: go-http-server
+  namespace: argocd
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/johnwesonga/go-http-server.git
+    targetRevision: main
+    path: k8s/overlays/prod
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+
+  syncPolicy:
+    automated:
+      prune: true       # delete removed resources
+      selfHeal: true    # fix drift automatically
+
+    syncOptions:
+      - CreateNamespace=true
+
+  revisionHistoryLimit: 5

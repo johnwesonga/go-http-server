@@ -7,6 +7,9 @@ build:
 load:
 	kind load docker-image $(IMAGE):$(TAG)
 
+tilt:
+	tilt up
+
 deploy:
 	cd k8s/overlays/dev && \
 	kustomize edit set image $(IMAGE)=$(IMAGE):$(TAG) && \

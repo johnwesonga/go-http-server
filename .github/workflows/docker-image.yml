@@ -1,44 +1,74 @@
-name: Docker Image CI
+name: Build and Update Image Tag
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 env:
   IMAGE_NAME: johnwesonga/go-http-server
 
 jobs:
-
-  build:
-
+  build-and-update:
     runs-on: ubuntu-latest
 
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      
-    # Set up Go (optional, for tests)
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.25.3'
-        
-    # Run tests (optional but recommended)
-    - name: Run tests
-      run: go test ./...
+    permissions:
+      contents: write   # required to push back to repo
 
-    # Log in to Docker Hub
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-      
-    - name: Build and push the Docker image
-      run: |
-        IMAGE_TAG=${GITHUB_SHA::7}
-        docker build -t $IMAGE_NAME:$IMAGE_TAG .
-        docker push $IMAGE_NAME:$IMAGE_TAG
-        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+    steps:
+      # 1. Checkout repo
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Set up Go (optional, for tests)
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      # 3. Run tests
+      - name: Run tests
+        run: go test ./...
+
+      # 4. Log in to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # 5. Build & push image
+      - name: Build and Push Docker Image
+        run: |
+          IMAGE_TAG=${GITHUB_SHA::7}
+
+          docker build -t $IMAGE_NAME:$IMAGE_TAG .
+          docker push $IMAGE_NAME:$IMAGE_TAG
+
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      # 6. Install Kustomize
+      - name: Install Kustomize
+        run: |
+          curl -s https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
+          sudo mv kustomize /usr/local/bin/
+
+      # 7. Update image tag in Kustomize (prod overlay)
+      - name: Update image tag in repo
+        run: |
+          cd k8s/overlays/prod
+
+          kustomize edit set image \
+            $IMAGE_NAME=$IMAGE_NAME:$IMAGE_TAG
+
+      # 8. Commit & push change
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          git add k8s/overlays/prod/kustomization.yaml
+
+          git commit -m "chore: update image tag to $IMAGE_TAG" || echo "No changes to commit"
+
+          git push

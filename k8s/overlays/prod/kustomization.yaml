@@ -1,15 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
 resources:
   - ../../base
 
+# Distinguish prod resources
 nameSuffix: -prod
 
+# Labels applied to all resources
 commonLabels:
   env: prod
+  app: go-http-server
 
+# Image override (CI updates newTag)
 images:
   - name: johnwesonga/go-http-server
-    newTag: latest
+    newTag: initial
 
+# Production-specific patches
 patches:
   - target:
       kind: Deployment
@@ -18,3 +26,17 @@ patches:
       - op: replace
         path: /spec/replicas
         value: 3
+
+      - op: add
+        path: /spec/template/spec/terminationGracePeriodSeconds
+        value: 15
+
+      - op: add
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
