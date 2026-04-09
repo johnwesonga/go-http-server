@@ -16,9 +16,11 @@ commonLabels:
 images:
 - name: johnwesonga/go-http-server
   newName: johnwesonga/go-http-server
-  newTag: 62498dd
+  newTag: 9e7a684
 
 # Production-specific patches
+
+
 
 
 patches:
